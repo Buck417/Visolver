@@ -1,6 +1,7 @@
 package com.example.android.visolver;
 
 import android.content.Intent;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -37,10 +38,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void dispatchTakePictureIntent() {
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-        }
-        /*Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         // Ensure that there's a camera activity to handle the intent
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             // Create the File where the photo should go
@@ -58,14 +55,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
             }
-        }*/
+        }
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK){
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
-            preview_img.setImageBitmap(imageBitmap);
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            File myPic = new File(mCurrentPhotoPath);
+            if (myPic.exists()) {
+
+                Bitmap myBitmap = BitmapFactory.decodeFile(myPic.getAbsolutePath());
+
+                ImageView myImage = (ImageView) findViewById(R.id.preview_image);
+
+                myImage.setImageBitmap(myBitmap);
+            }
         }
     }
 
