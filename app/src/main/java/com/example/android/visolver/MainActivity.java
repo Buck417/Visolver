@@ -1,10 +1,12 @@
 package com.example.android.visolver;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Camera;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -25,6 +27,7 @@ import android.widget.TextView;
 
 import com.google.android.gms.vision.CameraSource;
 import com.google.android.gms.vision.Detector;
+import com.google.android.gms.vision.Frame;
 import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
@@ -40,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final int RequestCameraPermissionID = 1001;
     private CameraSource cameraSource;
     private TextView textView;
+    private TextView pictureText;
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -70,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         camera_button.setOnClickListener(this);
         preview_img = (SurfaceView) findViewById(R.id.surface_view);
         textView = (TextView) findViewById(R.id.text_view);
+        pictureText = (TextView) findViewById(R.id.picture_text);
 
         TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
         if (!textRecognizer.isOperational()) {
@@ -171,6 +176,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (myPic.exists()) {
 
                 Bitmap myBitmap = BitmapFactory.decodeFile(myPic.getAbsolutePath());
+                detectText(myBitmap);
 
                 //ImageView myImage = (ImageView) findViewById(R.id.preview);
 
@@ -202,5 +208,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if(v == camera_button){
             dispatchTakePictureIntent();
         }
+    }
+
+    private void detectText(Bitmap image){
+        Frame imageFrame = new Frame.Builder().setBitmap(image).build();
+
+        TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
+        if(!textRecognizer.isOperational()){
+            Log.w("MainActivity", "Text Recognizer isn't started yet, wait and try again soon.");
+        }
+        else{
+            SparseArray<TextBlock> myTextBlock = textRecognizer.detect(imageFrame);
+            StringBuilder stringBuilder = new StringBuilder();
+            for (int i = 0; i < myTextBlock.size(); ++i) {
+                TextBlock item = myTextBlock.valueAt(i);
+                Rect box = item.getBoundingBox();
+                stringBuilder.append(item.getValue());
+                stringBuilder.append("\n");
+            }
+
+            pictureText.setText(stringBuilder.toString());
+
+        }
+        textRecognizer.release();
+
+
     }
 }
