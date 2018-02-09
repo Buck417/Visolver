@@ -6,7 +6,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Camera;
+import android.graphics.Matrix;
 import android.graphics.Rect;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -35,6 +37,8 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import static android.R.attr.bitmap;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -174,12 +178,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             File myPic = new File(mCurrentPhotoPath);
             if (myPic.exists()) {
-
-                Bitmap myBitmap = BitmapFactory.decodeFile(myPic.getAbsolutePath());
+                Bitmap myBitmap = constructBitmap(myPic);
                 detectText(myBitmap);
-
                 //ImageView myImage = (ImageView) findViewById(R.id.preview);
-
                 //myImage.setImageBitmap(myBitmap);
             }
         }
@@ -220,18 +221,73 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         else{
             SparseArray<TextBlock> myTextBlock = textRecognizer.detect(imageFrame);
             StringBuilder stringBuilder = new StringBuilder();
+            int newLine = 0;
             for (int i = 0; i < myTextBlock.size(); ++i) {
                 TextBlock item = myTextBlock.valueAt(i);
-                Rect box = item.getBoundingBox();
-                stringBuilder.append(item.getValue());
-                stringBuilder.append("\n");
+                //if(isNumeric(item.getValue())){
+                    stringBuilder.append(item.getValue());
+                    if(newLine < 2){
+                        stringBuilder.append(" ");
+                        newLine++;
+                    }
+                    else{
+                        stringBuilder.append("\n");
+                        newLine = 0;
+                    }
+                //}
+                //Rect box = item.getBoundingBox();
+
             }
 
+            Intent resultActivity = new Intent(MainActivity.this, Result.class);
+            resultActivity.putExtra("RESULTS", stringBuilder.toString());
+            resultActivity.putExtra("BITMAP", mCurrentPhotoPath);
+            startActivity(resultActivity);
             pictureText.setText(stringBuilder.toString());
 
         }
         textRecognizer.release();
+    }
 
+    private Bitmap constructBitmap(File imgFile){
+        ExifInterface exif = null;
+        try{
+            exif = new ExifInterface(mCurrentPhotoPath);
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+        Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
+        int orientValue = exif.getAttributeInt(exif.TAG_ORIENTATION, exif.ORIENTATION_NORMAL);
+        switch(orientValue){
+            case ExifInterface.ORIENTATION_ROTATE_90:
+               return resolveOrientation(myBitmap, 90);
 
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                return resolveOrientation(myBitmap, 180);
+
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                return resolveOrientation(myBitmap, 270);
+
+            default:
+                return myBitmap;
+        }
+    }
+
+    private boolean isNumeric(String value){
+        try{
+            int number = Integer.parseInt(value);
+        }
+        catch(NumberFormatException e){
+            return false;
+        }
+        return true;
+    }
+
+    private Bitmap resolveOrientation(Bitmap bitmap, int degree){
+        Matrix matrix = new Matrix();
+        matrix.postRotate(degree);
+        Bitmap rotatedImage = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        return rotatedImage;
     }
 }
