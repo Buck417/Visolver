@@ -1,13 +1,10 @@
 package com.example.android.visolver;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
-import android.graphics.Camera;
 import android.graphics.Matrix;
-import android.graphics.Rect;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
@@ -24,7 +21,6 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.graphics.Bitmap;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.gms.vision.CameraSource;
@@ -34,13 +30,15 @@ import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static android.R.attr.bitmap;
-
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+
+    private static final String TAG = "MainActivity";
 
     private Button camera_button;
     private SurfaceView preview_img;
@@ -82,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
         if (!textRecognizer.isOperational()) {
-            Log.w("MainActivity", "Detector dependencies are not yet available");
+            Log.w(TAG, "Detector dependencies are not yet available");
         } else {
             cameraSource = new CameraSource.Builder(getApplicationContext(), textRecognizer)
                     .setFacing(CameraSource.CAMERA_FACING_BACK)
@@ -176,9 +174,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data){
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            File myPic = new File(mCurrentPhotoPath);
+            File myPic = new File(mOriginalPhotoPath);
             if (myPic.exists()) {
                 Bitmap myBitmap = constructBitmap(myPic);
+
+                createFile(myBitmap);
                 detectText(myBitmap);
                 //ImageView myImage = (ImageView) findViewById(R.id.preview);
                 //myImage.setImageBitmap(myBitmap);
@@ -186,7 +186,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    String mCurrentPhotoPath;
+    private void createFile(Bitmap myBitmap) {
+        File photoFile = null;
+        try {
+            photoFile = createImageFile();
+        } catch (IOException ex) {
+            // Error occurred while creating the File
+        }
+        // Continue only if the File was successfully created
+        if (photoFile != null) {
+            OutputStream os;
+            try {
+                os = new FileOutputStream(photoFile);
+                myBitmap.compress(Bitmap.CompressFormat.JPEG, 100, os);
+                os.flush();
+                os.close();
+            } catch (Exception e) {
+                Log.e(TAG, "Error writing bitmap", e);
+            }
+            mOriginalPhotoPath = photoFile.getPath();
+        }
+
+    }
+
+    String mOriginalPhotoPath;
 
     private File createImageFile() throws IOException {
         // Create an image file name
@@ -200,7 +223,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         );
 
         // Save a file: path for use with ACTION_VIEW intents
-        mCurrentPhotoPath = image.getAbsolutePath();
+        mOriginalPhotoPath = image.getAbsolutePath();
         return image;
     }
 
@@ -216,7 +239,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
         if(!textRecognizer.isOperational()){
-            Log.w("MainActivity", "Text Recognizer isn't started yet, wait and try again soon.");
+            Log.w(TAG, "Text Recognizer isn't started yet, wait and try again soon.");
         }
         else{
             SparseArray<TextBlock> myTextBlock = textRecognizer.detect(imageFrame);
@@ -241,7 +264,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             Intent resultActivity = new Intent(MainActivity.this, Result.class);
             resultActivity.putExtra("RESULTS", stringBuilder.toString());
-            resultActivity.putExtra("BITMAP", mCurrentPhotoPath);
+            resultActivity.putExtra("BITMAP", mOriginalPhotoPath);
+            Log.v(TAG, stringBuilder.toString());
             startActivity(resultActivity);
             pictureText.setText(stringBuilder.toString());
 
@@ -252,7 +276,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Bitmap constructBitmap(File imgFile){
         ExifInterface exif = null;
         try{
-            exif = new ExifInterface(mCurrentPhotoPath);
+            exif = new ExifInterface(mOriginalPhotoPath);
         }
         catch(IOException e){
             e.printStackTrace();

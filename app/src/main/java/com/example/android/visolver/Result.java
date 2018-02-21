@@ -5,12 +5,15 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.File;
 
 public class Result extends AppCompatActivity {
+
+    private static final String TAG = "Result";
 
     TextView resultView;
     ImageView previewImage;
@@ -25,6 +28,7 @@ public class Result extends AppCompatActivity {
         Intent myIntent = getIntent();
         if(myIntent.hasExtra("RESULTS")){
             String results = myIntent.getStringExtra("RESULTS");
+            Log.v(TAG, results);
             resultView.setText(results);
             File myPic = new File(myIntent.getStringExtra("BITMAP"));
             if(myPic.exists()){
