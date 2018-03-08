@@ -13,9 +13,9 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
@@ -30,6 +30,7 @@ public class Result extends AppCompatActivity {
     TextView resultView;
     ImageView previewImage;
     private Bitmap originalImage;
+    private Bitmap sudokuImage;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -38,7 +39,7 @@ public class Result extends AppCompatActivity {
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i("OpenCV", "OpenCV loaded successfully");
-                    buildMat(originalImage);
+                    buildMat(sudokuImage);
                 } break;
                 default:
                 {
@@ -67,6 +68,7 @@ public class Result extends AppCompatActivity {
                 originalImage = BitmapFactory.decodeFile(myPic.getAbsolutePath());
             }
         }
+        sudokuImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.sudokuwide);
     }
 
     @Override
@@ -94,13 +96,46 @@ public class Result extends AppCompatActivity {
         Imgproc.adaptiveThreshold(blurImg, threshImg, 255, 1, 1, 11, 2);
 
         ArrayList<MatOfPoint> contours = new ArrayList<>();
+        Mat cannyEdges = new Mat();
         Mat hierarchy = new Mat();
-        Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_TREE, Imgproc.CHAIN_APPROX_SIMPLE, new Point(0,0));
-        Mat result = new Mat();
-        //Mat ans = new Mat(threshImg.size(), )
-        Scalar color = new Scalar(50, 50, 50);
-        Imgproc.drawContours(result, contours, 0, color);
-        Utils.matToBitmap(result, bmp);
+
+        Imgproc.Canny(threshImg, cannyEdges, 10, 100);
+        Log.i(TAG, "Got canny edges finished");
+        Imgproc.findContours(cannyEdges, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        Log.i(TAG, "Finished finding Contours " + contours.size());
+        Mat myContours = new Mat();
+        myContours.create(cannyEdges.rows(), cannyEdges.cols(), CvType.CV_8UC3);
+        Log.i(TAG, "Created new Mat myContours");
+        /*Random r = new Random();
+        for(int i = 0; i < 10; i++){
+            Imgproc.drawContours(myContours, contours, i, new Scalar(r.nextInt(255), r.nextInt(255), r.nextInt(255)), -1);
+            Log.i(TAG,"Drawing contours");
+        }*/
+        double maxVal = 0;
+        int maxValIdx = 0;
+        for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++)
+        {
+            double contourArea = Imgproc.contourArea(contours.get(contourIdx));
+            if (maxVal < contourArea)
+            {
+                maxVal = contourArea;
+                maxValIdx = contourIdx;
+            }
+        }
+
+        Imgproc.drawContours(myImg, contours, maxValIdx, new Scalar(0,255,0), 10);
+
+
+
+        //This section works for a single contour to create a red star
+        /*Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_TREE,Imgproc.CHAIN_APPROX_SIMPLE);
+        for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++) {
+            Imgproc.drawContours(myImg, contours, contourIdx, new Scalar(255, 0, 0), -1);
+        }*/
+
+
+
+        Utils.matToBitmap(myImg, bmp);
         previewImage.setImageBitmap(bmp);
     }
 }
