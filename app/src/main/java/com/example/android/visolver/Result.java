@@ -3,6 +3,7 @@ package com.example.android.visolver;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,12 +17,19 @@ import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.Point;
+import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
+
+import static org.opencv.core.CvType.CV_8UC3;
 
 public class Result extends AppCompatActivity {
 
@@ -104,7 +112,7 @@ public class Result extends AppCompatActivity {
         Imgproc.findContours(cannyEdges, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         Log.i(TAG, "Finished finding Contours " + contours.size());
         Mat myContours = new Mat();
-        myContours.create(cannyEdges.rows(), cannyEdges.cols(), CvType.CV_8UC3);
+        myContours.create(cannyEdges.rows(), cannyEdges.cols(), CV_8UC3);
         Log.i(TAG, "Created new Mat myContours");
         /*Random r = new Random();
         for(int i = 0; i < 10; i++){
@@ -122,8 +130,34 @@ public class Result extends AppCompatActivity {
                 maxValIdx = contourIdx;
             }
         }
+        Mat test = Mat.zeros(myImg.rows(), myImg.cols(), CvType.CV_8UC3);
+        Imgproc.drawContours(test, contours, maxValIdx, new Scalar(0,255,255), 10);
+        MatOfPoint matOfPoint = contours.get(maxValIdx);
+        Rect r = Imgproc.boundingRect(matOfPoint);
+        Log.i(TAG, "Top left corner value is " + r.x + " " + r.y);
+        Log.i(TAG, "Bottom left value is " + r.x + " " + r.y+r.height);
+        Log.i(TAG, "Top right value is " + r.x+r.width + " " + r.y);
+        Log.i(TAG, "Bottom corner value is " + r.x+r.width + " " + r.y+r.height);
 
-        Imgproc.drawContours(myImg, contours, maxValIdx, new Scalar(0,255,0), 10);
+
+        final int w = r.width;
+        final int h = r.height;
+
+        Bitmap compare = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+
+        int color1, color2, a, g, b, red;
+
+        for (int x = 0; x < w; x++) {
+            for (int y = 0; y < h; y++) {
+                bmp.getPixel(r.x+x, r.y+y);
+
+
+
+
+                compare.setPixel(x, y, Color.argb(0, 0, 0, 0));
+            }
+        }
+
 
 
 
@@ -135,7 +169,7 @@ public class Result extends AppCompatActivity {
 
 
 
-        Utils.matToBitmap(myImg, bmp);
-        previewImage.setImageBitmap(bmp);
+        Utils.matToBitmap(matOfPoint, compare);
+        previewImage.setImageBitmap(compare);
     }
 }
