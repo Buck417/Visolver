@@ -43,6 +43,9 @@ public class Result extends AppCompatActivity {
     private Bitmap sudokuImage;
     String picPath;
 
+    private final int NUMBER_COLS = 9;
+    private final int NUMBER_ROWS = 9;
+
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -111,7 +114,7 @@ public class Result extends AppCompatActivity {
         Mat cannyEdges = new Mat();
         Mat hierarchy = new Mat();
 
-        //Imgproc.Canny(threshImg, cannyEdges, 10, 100);
+        //Imgproc.Canny(myImg, cannyEdges, 10, 100);
         Log.i(TAG, "Got canny edges finished");
         Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         Log.i(TAG, "Finished finding Contours " + contours.size());
@@ -134,10 +137,12 @@ public class Result extends AppCompatActivity {
                 maxValIdx = contourIdx;
             }
         }
-        Mat test = Mat.zeros(myImg.rows(), myImg.cols(), CvType.CV_8UC3);
         //Note: Android uses images with alpha values, so not including the last 255 value on Scalar means any contour
         //we draw will be transparent.
-        Imgproc.drawContours(threshImg, contours, maxValIdx, new Scalar(0,255,255, 255), 10);
+        Imgproc.drawContours(threshImg, contours, maxValIdx, new Scalar(0,255,255, 255), -1);
+
+        //This attempts to build a Rect from the points of the largest contour
+        //Would need a canvas to draw the Rect on the original image
         MatOfPoint matOfPoint = contours.get(maxValIdx);
         Rect r = Imgproc.boundingRect(matOfPoint);
         Log.i(TAG, "Top left corner value is " + r.x + " " + r.y);
@@ -147,11 +152,7 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Total height is " + r.height);
         Log.i(TAG, "Total width is " + r.width);
 
-        Point[] corners = new Point[4];
-        corners[0] = new Point(r.x, r.y);
-        corners[1] = new Point(r.x + r.height, r.y);
-        corners[2] = new Point(r.x, r.y+r.width);
-        corners[3] = new Point(r.x+r.height, r.y+r.width);
+        Bitmap puzzle = Bitmap.createBitmap(bmp, r.x, r.y, r.width, r.height);
 
         /*MatOfPoint2f src = new MatOfPoint2f(corners[0], corners[1], corners[2], corners[3]);
         MatOfPoint testMat = new MatOfPoint(contours.get(maxValIdx));
@@ -200,8 +201,28 @@ public class Result extends AppCompatActivity {
         paint.setColor(Color.RED);
         cnvs.drawBitmap(BitmapFactory.decodeFile(picPath), 0, 0, null);
         cnvs.drawRect(r.x, r.y, r.x+r.width, r.y+r.height, paint);*/
-
         Utils.matToBitmap(threshImg, bmp);
-        previewImage.setImageBitmap(bmp);
+        Bitmap[][] tiles = splitBitmap(puzzle, 9, 9);
+        previewImage.setImageBitmap(tiles[0][0]);
+
+    }
+
+    public Bitmap[][] splitBitmap(Bitmap bitmap, int xCount, int yCount) {
+        // Allocate a two dimensional array to hold the individual images.
+        Bitmap[][] bitmaps = new Bitmap[xCount][yCount];
+        int width, height;
+        // Divide the original bitmap width by the desired vertical column count
+        width = bitmap.getWidth() / xCount;
+        // Divide the original bitmap height by the desired horizontal row count
+        height = bitmap.getHeight() / yCount;
+        // Loop the array and create bitmaps for each coordinate
+        for(int x = 0; x < xCount; ++x) {
+            for(int y = 0; y < yCount; ++y) {
+                // Create the sliced bitmap
+                bitmaps[x][y] = Bitmap.createBitmap(bitmap, x * width, y * height, width, height);
+            }
+        }
+        // Return the array
+        return bitmaps;
     }
 }
