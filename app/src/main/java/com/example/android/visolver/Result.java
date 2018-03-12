@@ -3,7 +3,9 @@ package com.example.android.visolver;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -39,6 +41,7 @@ public class Result extends AppCompatActivity {
     ImageView previewImage;
     private Bitmap originalImage;
     private Bitmap sudokuImage;
+    String picPath;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -71,6 +74,7 @@ public class Result extends AppCompatActivity {
             String results = myIntent.getStringExtra("RESULTS");
             Log.v(TAG, results);
             resultView.setText(results);
+            picPath = myIntent.getStringExtra("BITMAP");
             File myPic = new File(myIntent.getStringExtra("BITMAP"));
             if(myPic.exists()){
                 originalImage = BitmapFactory.decodeFile(myPic.getAbsolutePath());
@@ -131,16 +135,38 @@ public class Result extends AppCompatActivity {
             }
         }
         Mat test = Mat.zeros(myImg.rows(), myImg.cols(), CvType.CV_8UC3);
-        Imgproc.drawContours(test, contours, maxValIdx, new Scalar(0,255,255), 10);
+        //Note: Android uses images with alpha values, so not including the last 255 value on Scalar means any contour
+        //we draw will be transparent.
+        Imgproc.drawContours(myImg, contours, maxValIdx, new Scalar(0,255,255, 255), 10);
         MatOfPoint matOfPoint = contours.get(maxValIdx);
         Rect r = Imgproc.boundingRect(matOfPoint);
         Log.i(TAG, "Top left corner value is " + r.x + " " + r.y);
         Log.i(TAG, "Bottom left value is " + r.x + " " + r.y+r.height);
         Log.i(TAG, "Top right value is " + r.x+r.width + " " + r.y);
         Log.i(TAG, "Bottom corner value is " + r.x+r.width + " " + r.y+r.height);
+        Log.i(TAG, "Total height is " + r.height);
+        Log.i(TAG, "Total width is " + r.width);
+
+        Point[] corners = new Point[4];
+        corners[0] = new Point(r.x, r.y);
+        corners[1] = new Point(r.x + r.height, r.y);
+        corners[2] = new Point(r.x, r.y+r.width);
+        corners[3] = new Point(r.x+r.height, r.y+r.width);
+
+        /*MatOfPoint2f src = new MatOfPoint2f(corners[0], corners[1], corners[2], corners[3]);
+        MatOfPoint testMat = new MatOfPoint(contours.get(maxValIdx));
+
+        MatOfPoint dst = new MatOfPoint(myImg);
+                *//*new Point(0, 0),
+                new Point(1000-1, 0),
+                new Point(0, 1000-1),
+                new Point(1000-1, 1000-1));*//*
+        Mat warpMat = Imgproc.getPerspectiveTransform(testMat, dst);
+        Mat destImage = new Mat();
+        Imgproc.warpPerspective(myImg, destImage, warpMat, myImg.size());*/
 
 
-        final int w = r.width;
+        /*final int w = r.width;
         final int h = r.height;
 
         Bitmap compare = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
@@ -156,7 +182,7 @@ public class Result extends AppCompatActivity {
 
                 compare.setPixel(x, y, Color.argb(0, 0, 0, 0));
             }
-        }
+        }*/
 
 
 
@@ -169,7 +195,13 @@ public class Result extends AppCompatActivity {
 
 
 
-        Utils.matToBitmap(matOfPoint, compare);
-        previewImage.setImageBitmap(compare);
+        /*Canvas cnvs = new Canvas();
+        Paint paint = new Paint();
+        paint.setColor(Color.RED);
+        cnvs.drawBitmap(BitmapFactory.decodeFile(picPath), 0, 0, null);
+        cnvs.drawRect(r.x, r.y, r.x+r.width, r.y+r.height, paint);*/
+
+        Utils.matToBitmap(myImg, bmp);
+        previewImage.setImageBitmap(bmp);
     }
 }
