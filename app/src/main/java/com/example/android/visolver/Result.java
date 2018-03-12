@@ -50,7 +50,7 @@ public class Result extends AppCompatActivity {
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i("OpenCV", "OpenCV loaded successfully");
-                    buildMat(sudokuImage);
+                    buildMat(originalImage);
                 } break;
                 default:
                 {
@@ -111,12 +111,12 @@ public class Result extends AppCompatActivity {
         Mat cannyEdges = new Mat();
         Mat hierarchy = new Mat();
 
-        Imgproc.Canny(threshImg, cannyEdges, 10, 100);
+        //Imgproc.Canny(threshImg, cannyEdges, 10, 100);
         Log.i(TAG, "Got canny edges finished");
-        Imgproc.findContours(cannyEdges, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         Log.i(TAG, "Finished finding Contours " + contours.size());
         Mat myContours = new Mat();
-        myContours.create(cannyEdges.rows(), cannyEdges.cols(), CV_8UC3);
+        myContours.create(threshImg.rows(), threshImg.cols(), CV_8UC3);
         Log.i(TAG, "Created new Mat myContours");
         /*Random r = new Random();
         for(int i = 0; i < 10; i++){
@@ -137,7 +137,7 @@ public class Result extends AppCompatActivity {
         Mat test = Mat.zeros(myImg.rows(), myImg.cols(), CvType.CV_8UC3);
         //Note: Android uses images with alpha values, so not including the last 255 value on Scalar means any contour
         //we draw will be transparent.
-        Imgproc.drawContours(myImg, contours, maxValIdx, new Scalar(0,255,255, 255), 10);
+        Imgproc.drawContours(threshImg, contours, maxValIdx, new Scalar(0,255,255, 255), 10);
         MatOfPoint matOfPoint = contours.get(maxValIdx);
         Rect r = Imgproc.boundingRect(matOfPoint);
         Log.i(TAG, "Top left corner value is " + r.x + " " + r.y);
@@ -201,7 +201,7 @@ public class Result extends AppCompatActivity {
         cnvs.drawBitmap(BitmapFactory.decodeFile(picPath), 0, 0, null);
         cnvs.drawRect(r.x, r.y, r.x+r.width, r.y+r.height, paint);*/
 
-        Utils.matToBitmap(myImg, bmp);
+        Utils.matToBitmap(threshImg, bmp);
         previewImage.setImageBitmap(bmp);
     }
 }
