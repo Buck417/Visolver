@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -29,6 +31,9 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,7 +56,7 @@ public class Result extends AppCompatActivity {
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i("OpenCV", "OpenCV loaded successfully");
-                    buildMat(originalImage);
+                    buildMat(sudokuImage);
                 } break;
                 default:
                 {
@@ -81,7 +86,7 @@ public class Result extends AppCompatActivity {
                 originalImage = BitmapFactory.decodeFile(myPic.getAbsolutePath());
             }
         }
-        sudokuImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.sudokuwide);
+        sudokuImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.sudokutest);
     }
 
     @Override
@@ -112,26 +117,10 @@ public class Result extends AppCompatActivity {
         Mat hierarchy = new Mat();
 
         Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
-        Log.i(TAG, "Finished finding Contours " + contours.size());
-        Mat myContours = new Mat();
-        myContours.create(threshImg.rows(), threshImg.cols(), CV_8UC3);
-        Log.i(TAG, "Created new Mat myContours");
-        /*Random r = new Random();
-        for(int i = 0; i < 10; i++){
-            Imgproc.drawContours(myContours, contours, i, new Scalar(r.nextInt(255), r.nextInt(255), r.nextInt(255)), -1);
-            Log.i(TAG,"Drawing contours");
-        }*/
-        double maxVal = 0;
-        int maxValIdx = 0;
-        for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++)
-        {
-            double contourArea = Imgproc.contourArea(contours.get(contourIdx));
-            if (maxVal < contourArea)
-            {
-                maxVal = contourArea;
-                maxValIdx = contourIdx;
-            }
-        }
+
+
+        int largestContourIdx = getMaxContour(contours);
+
 
 
 
@@ -140,11 +129,11 @@ public class Result extends AppCompatActivity {
 
         //Note: Android uses images with alpha values, so not including the last 255 value on Scalar means any contour
         //we draw will be transparent.
-        Imgproc.drawContours(myImg, contours, maxValIdx, new Scalar(0,255,255, 255), -1);
+        Imgproc.drawContours(myImg, contours, largestContourIdx, new Scalar(0,255,255, 255), 5);
 
         //This attempts to build a Rect from the points of the largest contour
         //Would need a canvas to draw the Rect on the original image
-        MatOfPoint matOfPoint = contours.get(maxValIdx);
+        MatOfPoint matOfPoint = contours.get(largestContourIdx);
         Rect r = Imgproc.boundingRect(matOfPoint);
         Log.i(TAG, "Top left corner value is " + r.x + " " + r.y);
         Log.i(TAG, "Bottom left value is " + r.x + " " + r.y+r.height);
@@ -154,8 +143,13 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Total width is " + r.width);
         Bitmap puzzle = Bitmap.createBitmap(bmp, r.x, r.y, r.width, r.height);
         //Utils.matToBitmap(myImg, bmp);
+        //buildFile(puzzle);
 
-
+        //Testing circle corner points
+        /*Imgproc.circle(myImg, new Point(r.x, r.y), 50, new Scalar(255, 0, 0),2);
+        Imgproc.circle(myImg, new Point(r.x+r.width, r.y), 50, new Scalar(255, 0, 0),2);
+        Imgproc.circle(myImg, new Point(r.x, r.y+r.height), 50, new Scalar(255, 0, 0),2);
+        Imgproc.circle(myImg, new Point(r.x+r.width, r.y+r.height), 50, new Scalar(255, 0, 0),2);*/
         /*MatOfPoint2f src = new MatOfPoint2f(corners[0], corners[1], corners[2], corners[3]);
         MatOfPoint testMat = new MatOfPoint(contours.get(maxValIdx));
 
@@ -197,7 +191,7 @@ public class Result extends AppCompatActivity {
         }*/
 
 
-        int finalWidth = previewImage.getMaxWidth();
+        /*int finalWidth = previewImage.getMaxWidth();
         int finalHeight = previewImage.getMaxHeight();
         ArrayList<Point> sourcePoints = new ArrayList<>();
         sourcePoints.add(new Point(0.0, 0.0));
@@ -217,8 +211,8 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Dims of src is " + srcMat.dims());
         Log.i(TAG, "Dims of dst is " + destMat.dims());
 
-        Imgproc.warpPerspective(srcMat, destMat, result, destMat.size());
-        Utils.matToBitmap(result, bmp);
+        Imgproc.warpPerspective(srcMat, destMat, result, destMat.size());*/
+        Utils.matToBitmap(myImg, bmp);
 
 
 
@@ -227,12 +221,12 @@ public class Result extends AppCompatActivity {
 
         //Utils.matToBitmap(threshImg, bmp);
         //Bitmap[][] tiles = splitBitmap(puzzle, 9, 9);
-        previewImage.setImageBitmap(bmp);
+        previewImage.setImageBitmap(puzzle);
 
 
     }
 
-    public Bitmap[][] splitBitmap(Bitmap bitmap, int xCount, int yCount) {
+    private Bitmap[][] splitBitmap(Bitmap bitmap, int xCount, int yCount) {
         // Allocate a two dimensional array to hold the individual images.
         Bitmap[][] bitmaps = new Bitmap[xCount][yCount];
         int width, height;
@@ -249,5 +243,52 @@ public class Result extends AppCompatActivity {
         }
         // Return the array
         return bitmaps;
+    }
+
+    private int getMaxContour(ArrayList<MatOfPoint> contours){
+        double maxVal = 0;
+        int maxValIdx = 0;
+        for (int contourIdx = 0; contourIdx < contours.size(); contourIdx++)
+        {
+            double contourArea = Imgproc.contourArea(contours.get(contourIdx));
+            if (maxVal < contourArea)
+            {
+                maxVal = contourArea;
+                maxValIdx = contourIdx;
+            }
+        }
+        return maxValIdx;
+    }
+
+    private void buildFile(Bitmap bmp){
+        // Assume block needs to be inside a Try/Catch block.
+        try {
+            String path = Environment.getExternalStorageDirectory().toString();
+            OutputStream fOut = null;
+            Integer counter = 0;
+            File file = new File(path, "sudokutest3.png"); // the File to save , append increasing numeric counter to prevent files from getting overwritten.
+            fOut = new FileOutputStream(file);
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+            fOut.flush(); // Not really required
+            fOut.close(); // do not forget to close the stream
+            MediaStore.Images.Media.insertImage(getContentResolver(),file.getAbsolutePath(),file.getName(),file.getName());
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+
+         // obtaining the Bitmap
+        // saving the Bitmap to a file compressed as a JPEG with 85% compression rate
+
+
+    }
+
+    public File getPublicAlbumStorageDir(String albumName) {
+        // Get the directory for the user's public pictures directory.
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES), albumName);
+        if (!file.mkdirs()) {
+            Log.e(TAG, "Directory not created");
+        }
+        return file;
     }
 }

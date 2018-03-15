@@ -145,8 +145,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             });
         }
         //Comment out to use the camera
-        //Intent myIntent = new Intent(this, Result.class);
-        //startActivity(myIntent);
+        Intent myIntent = new Intent(this, Result.class);
+        startActivity(myIntent);
     }
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
