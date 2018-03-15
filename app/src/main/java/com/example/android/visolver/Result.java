@@ -26,6 +26,7 @@ import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.utils.Converters;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -42,9 +43,6 @@ public class Result extends AppCompatActivity {
     private Bitmap originalImage;
     private Bitmap sudokuImage;
     String picPath;
-
-    private final int NUMBER_COLS = 9;
-    private final int NUMBER_ROWS = 9;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -111,11 +109,8 @@ public class Result extends AppCompatActivity {
         Imgproc.adaptiveThreshold(blurImg, threshImg, 255, 1, 1, 11, 2);
 
         ArrayList<MatOfPoint> contours = new ArrayList<>();
-        Mat cannyEdges = new Mat();
         Mat hierarchy = new Mat();
 
-        //Imgproc.Canny(myImg, cannyEdges, 10, 100);
-        Log.i(TAG, "Got canny edges finished");
         Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
         Log.i(TAG, "Finished finding Contours " + contours.size());
         Mat myContours = new Mat();
@@ -137,9 +132,15 @@ public class Result extends AppCompatActivity {
                 maxValIdx = contourIdx;
             }
         }
+
+
+
+
+
+
         //Note: Android uses images with alpha values, so not including the last 255 value on Scalar means any contour
         //we draw will be transparent.
-        Imgproc.drawContours(threshImg, contours, maxValIdx, new Scalar(0,255,255, 255), -1);
+        Imgproc.drawContours(myImg, contours, maxValIdx, new Scalar(0,255,255, 255), -1);
 
         //This attempts to build a Rect from the points of the largest contour
         //Would need a canvas to draw the Rect on the original image
@@ -151,8 +152,9 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Bottom corner value is " + r.x+r.width + " " + r.y+r.height);
         Log.i(TAG, "Total height is " + r.height);
         Log.i(TAG, "Total width is " + r.width);
-
         Bitmap puzzle = Bitmap.createBitmap(bmp, r.x, r.y, r.width, r.height);
+        //Utils.matToBitmap(myImg, bmp);
+
 
         /*MatOfPoint2f src = new MatOfPoint2f(corners[0], corners[1], corners[2], corners[3]);
         MatOfPoint testMat = new MatOfPoint(contours.get(maxValIdx));
@@ -195,15 +197,38 @@ public class Result extends AppCompatActivity {
         }*/
 
 
+        int finalWidth = previewImage.getMaxWidth();
+        int finalHeight = previewImage.getMaxHeight();
+        ArrayList<Point> sourcePoints = new ArrayList<>();
+        sourcePoints.add(new Point(0.0, 0.0));
+        sourcePoints.add(new Point(puzzle.getWidth(), 0.0));
+        sourcePoints.add(new Point(puzzle.getWidth(), puzzle.getHeight()));
+        sourcePoints.add(new Point(0.0, puzzle.getHeight()));
+        Mat srcMat = Converters.vector_Point2f_to_Mat(sourcePoints);
 
-        /*Canvas cnvs = new Canvas();
-        Paint paint = new Paint();
-        paint.setColor(Color.RED);
-        cnvs.drawBitmap(BitmapFactory.decodeFile(picPath), 0, 0, null);
-        cnvs.drawRect(r.x, r.y, r.x+r.width, r.y+r.height, paint);*/
-        Utils.matToBitmap(threshImg, bmp);
-        Bitmap[][] tiles = splitBitmap(puzzle, 9, 9);
-        previewImage.setImageBitmap(tiles[0][0]);
+        ArrayList<Point> destPoints = new ArrayList<>();
+        destPoints.add(new Point(0.0, 0.0));
+        destPoints.add(new Point(finalWidth, 0.0));
+        destPoints.add(new Point(finalWidth, finalHeight));
+        destPoints.add(new Point(0.0, finalHeight));
+        Mat destMat = Converters.vector_Point2f_to_Mat(destPoints);
+
+        Mat result = Imgproc.getPerspectiveTransform(srcMat, destMat);
+        Log.i(TAG, "Dims of src is " + srcMat.dims());
+        Log.i(TAG, "Dims of dst is " + destMat.dims());
+
+        Imgproc.warpPerspective(srcMat, destMat, result, destMat.size());
+        Utils.matToBitmap(result, bmp);
+
+
+
+
+
+
+        //Utils.matToBitmap(threshImg, bmp);
+        //Bitmap[][] tiles = splitBitmap(puzzle, 9, 9);
+        previewImage.setImageBitmap(bmp);
+
 
     }
 
