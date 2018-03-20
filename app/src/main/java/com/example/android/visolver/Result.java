@@ -85,7 +85,7 @@ public class Result extends AppCompatActivity {
             File myPic = new File(myIntent.getStringExtra("BITMAP"));
             if(myPic.exists()){
                 originalImage = BitmapFactory.decodeFile(myPic.getAbsolutePath());
-                buildFile(originalImage);
+                //buildFile(originalImage);
             }
         }
         //sudokuImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.sudokutest);
@@ -138,17 +138,34 @@ public class Result extends AppCompatActivity {
         //Would need a canvas to draw the Rect on the original image
         MatOfPoint matOfPoint = contours.get(largestContourIdx);
 
-        Point[] vertices = findCorners(matOfPoint.toList());
-        double distance = Math.hypot(Math.abs(vertices[1].x - vertices[0].x), Math.abs(vertices[1].y - vertices[0].y));
+        org.opencv.core.Point[] srcCorners = findCorners(matOfPoint.toList());
+
+        double distance = Math.hypot(Math.abs(srcCorners[1].x - srcCorners[0].x), Math.abs(srcCorners[1].y - srcCorners[0].y));
         for(int i = 0; i < 3; i++){
-            distance = Math.max(distance, Math.hypot(Math.abs(vertices[i+1].x - vertices[i].x), Math.abs(vertices[i+1].y - vertices[i].y)));
+            distance = Math.max(distance, Math.hypot(Math.abs(srcCorners[i+1].x - srcCorners[i].x), Math.abs(srcCorners[i+1].y - srcCorners[i].y)));
         }
+        MatOfPoint2f srcMat = new MatOfPoint2f(srcCorners);
+
+        org.opencv.core.Point[] destCorners = new org.opencv.core.Point[4];
+        destCorners[0] = new Point(0, 0);
+        destCorners[1] = new Point(distance-1, 0);
+        destCorners[2] = new Point(distance-1, distance-1);
+        destCorners[3] = new Point(0, distance-1);
+        MatOfPoint2f destMat = new MatOfPoint2f(destCorners);
 
 
-        Log.i(TAG, "Top left corner value is " + vertices[0].x + " " + vertices[0].y);
-        Log.i(TAG, "Top right value is " + vertices[1].x + " " + vertices[1].y);
-        Log.i(TAG, "Bottom right value is " + vertices[2].x + " " + vertices[2].y);
-        Log.i(TAG, "Bottom left value is " + vertices[3].x + " " + vertices[3].y);
+        Mat lambda;
+        lambda = Imgproc.getPerspectiveTransform(srcMat, destMat);
+
+        Mat output = new Mat((int) distance, (int) distance, CvType.CV_8UC3);
+        Imgproc.warpPerspective(threshImg, output, lambda, output.size());
+
+
+        Log.i(TAG, "Top left corner value is " + srcCorners[0].x + " " + srcCorners[0].y);
+        Log.i(TAG, "Top right value is " + srcCorners[1].x + " " + srcCorners[1].y);
+        Log.i(TAG, "Bottom right value is " + srcCorners[2].x + " " + srcCorners[2].y);
+        Log.i(TAG, "Bottom left value is " + srcCorners[3].x + " " + srcCorners[3].y);
+        Log.i(TAG, "Largest distance is " + distance);
         //Log.i(TAG, "Total height is " + r.height);
         //Log.i(TAG, "Total width is " + r.width);
         //Bitmap puzzle = Bitmap.createBitmap(bmp, r.x, r.y, r.width, r.height);
@@ -222,8 +239,9 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Dims of dst is " + destMat.dims());
 
         Imgproc.warpPerspective(srcMat, destMat, result, destMat.size());*/
+        Bitmap bmp2 = Bitmap.createBitmap(output.width(), output.height(), Bitmap.Config.RGB_565);
 
-        Utils.matToBitmap(myImg, bmp);
+        Utils.matToBitmap(output, bmp2);
 
 
 
@@ -231,8 +249,14 @@ public class Result extends AppCompatActivity {
 
 
         //Utils.matToBitmap(threshImg, bmp);
-        //Bitmap[][] tiles = splitBitmap(puzzle, 9, 9);
-        previewImage.setImageBitmap(bmp);
+        Bitmap[][] tiles = splitBitmap(bmp2, 9, 9);
+        /*for(int i = 0; i < 9; i++){
+            for(int j = 0; j < 9; j++){
+                String filename = "grid" + i + "" + j;
+                buildFile(tiles[i][j], filename);
+            }
+        }*/
+        previewImage.setImageBitmap(bmp2);
 
 
     }
@@ -310,18 +334,19 @@ public class Result extends AppCompatActivity {
         return vertices;
     }
 
-    private void buildFile(Bitmap bmp){
+    private void buildFile(Bitmap bmp, String filename){
         // Assume block needs to be inside a Try/Catch block.
         try {
-            String path = Environment.getExternalStorageDirectory().toString();
+            String path = Environment.getExternalStorageDirectory().toString() + "/grid";
             OutputStream fOut = null;
             Integer counter = 0;
-            File file = new File(path, "sudokutest3.png"); // the File to save , append increasing numeric counter to prevent files from getting overwritten.
+            File file = new File(path, filename + ".jpeg"); // the File to save , append increasing numeric counter to prevent files from getting overwritten.
             fOut = new FileOutputStream(file);
-            bmp.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+            bmp.compress(Bitmap.CompressFormat.JPEG, 0, fOut);
             fOut.flush(); // Not really required
             fOut.close(); // do not forget to close the stream
             MediaStore.Images.Media.insertImage(getContentResolver(),file.getAbsolutePath(),file.getName(),file.getName());
+            Log.i(TAG, "Finished building a file");
         } catch(Exception e){
             e.printStackTrace();
         }
