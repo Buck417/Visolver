@@ -18,6 +18,7 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -56,7 +57,7 @@ public class Result extends AppCompatActivity {
                 case LoaderCallbackInterface.SUCCESS:
                 {
                     Log.i("OpenCV", "OpenCV loaded successfully");
-                    buildMat(sudokuImage);
+                    buildMat(originalImage);
                 } break;
                 default:
                 {
@@ -84,9 +85,10 @@ public class Result extends AppCompatActivity {
             File myPic = new File(myIntent.getStringExtra("BITMAP"));
             if(myPic.exists()){
                 originalImage = BitmapFactory.decodeFile(myPic.getAbsolutePath());
+                buildFile(originalImage);
             }
         }
-        sudokuImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.sudokutest);
+        //sudokuImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.sudokutest);
     }
 
     @Override
@@ -116,7 +118,8 @@ public class Result extends AppCompatActivity {
         ArrayList<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
 
-        Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+        Imgproc.findContours(threshImg, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
 
 
         int largestContourIdx = getMaxContour(contours);
@@ -129,19 +132,44 @@ public class Result extends AppCompatActivity {
 
         //Note: Android uses images with alpha values, so not including the last 255 value on Scalar means any contour
         //we draw will be transparent.
-        Imgproc.drawContours(myImg, contours, largestContourIdx, new Scalar(0,255,255, 255), 5);
+        //Imgproc.drawContours(myImg, contours, largestContourIdx, new Scalar(0,255,255, 255), 5);
 
         //This attempts to build a Rect from the points of the largest contour
         //Would need a canvas to draw the Rect on the original image
         MatOfPoint matOfPoint = contours.get(largestContourIdx);
-        Rect r = Imgproc.boundingRect(matOfPoint);
-        Log.i(TAG, "Top left corner value is " + r.x + " " + r.y);
-        Log.i(TAG, "Bottom left value is " + r.x + " " + r.y+r.height);
-        Log.i(TAG, "Top right value is " + r.x+r.width + " " + r.y);
-        Log.i(TAG, "Bottom corner value is " + r.x+r.width + " " + r.y+r.height);
-        Log.i(TAG, "Total height is " + r.height);
-        Log.i(TAG, "Total width is " + r.width);
-        Bitmap puzzle = Bitmap.createBitmap(bmp, r.x, r.y, r.width, r.height);
+        MatOfPoint2f  matOfPoint2f = new MatOfPoint2f( matOfPoint.toArray() );
+        //Rect r = Imgproc.boundingRect(matOfPoint);
+
+        double epsilon = Imgproc.arcLength(matOfPoint2f, true);
+        MatOfPoint2f approx = new MatOfPoint2f();
+        Imgproc.approxPolyDP(matOfPoint2f, approx, epsilon, true);
+        MatOfPoint returnedMat = new MatOfPoint(approx.toArray());
+        contours.add(returnedMat);
+        Imgproc.drawContours(myImg, contours, contours.lastIndexOf(returnedMat), new Scalar(0,0,255, 255), 5);
+
+        Point[] vertices = findCorners(matOfPoint.toList());
+
+
+
+        //This block finds an approx rect but is not sufficient.
+        /*MatOfPoint2f  matOfPoint2f = new MatOfPoint2f( matOfPoint.toArray() );
+        RotatedRect r = Imgproc.minAreaRect(matOfPoint2f);
+        Point[] vertices = new Point[4];
+        r.points(vertices);
+        Imgproc.line(myImg, vertices[3], vertices[0],new Scalar(255, 0, 0),2 );
+        for(int i = 0; i < 3; i++){
+            Imgproc.line(myImg, vertices[i], vertices[i+1], new Scalar(255, 0, 0),2);
+        }*/
+
+
+
+        /*Log.i(TAG, "Top left corner value is " + vertices[0].x + " " + vertices[0].y);
+        Log.i(TAG, "Bottom left value is " + vertices[1].x + " " + vertices[1].y);
+        Log.i(TAG, "Top right value is " + vertices[2].x + " " + vertices[2].y);
+        Log.i(TAG, "Bottom corner value is " + vertices[3].x + " " + vertices[3].y);*/
+        //Log.i(TAG, "Total height is " + r.height);
+        //Log.i(TAG, "Total width is " + r.width);
+        //Bitmap puzzle = Bitmap.createBitmap(bmp, r.x, r.y, r.width, r.height);
         //Utils.matToBitmap(myImg, bmp);
         //buildFile(puzzle);
 
@@ -149,15 +177,15 @@ public class Result extends AppCompatActivity {
         /*Imgproc.circle(myImg, new Point(r.x, r.y), 50, new Scalar(255, 0, 0),2);
         Imgproc.circle(myImg, new Point(r.x+r.width, r.y), 50, new Scalar(255, 0, 0),2);
         Imgproc.circle(myImg, new Point(r.x, r.y+r.height), 50, new Scalar(255, 0, 0),2);
-        Imgproc.circle(myImg, new Point(r.x+r.width, r.y+r.height), 50, new Scalar(255, 0, 0),2);*/
-        /*MatOfPoint2f src = new MatOfPoint2f(corners[0], corners[1], corners[2], corners[3]);
+        Imgproc.circle(myImg, new Point(r.x+r.width, r.y+r.height), 50, new Scalar(255, 0, 0),2);
+        MatOfPoint2f src = new MatOfPoint2f(corners[0], corners[1], corners[2], corners[3]);
         MatOfPoint testMat = new MatOfPoint(contours.get(maxValIdx));
 
         MatOfPoint dst = new MatOfPoint(myImg);
-                *//*new Point(0, 0),
+                new Point(0, 0),
                 new Point(1000-1, 0),
                 new Point(0, 1000-1),
-                new Point(1000-1, 1000-1));*//*
+                new Point(1000-1, 1000-1));
         Mat warpMat = Imgproc.getPerspectiveTransform(testMat, dst);
         Mat destImage = new Mat();
         Imgproc.warpPerspective(myImg, destImage, warpMat, myImg.size());*/
@@ -212,6 +240,7 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Dims of dst is " + destMat.dims());
 
         Imgproc.warpPerspective(srcMat, destMat, result, destMat.size());*/
+
         Utils.matToBitmap(myImg, bmp);
 
 
@@ -221,7 +250,7 @@ public class Result extends AppCompatActivity {
 
         //Utils.matToBitmap(threshImg, bmp);
         //Bitmap[][] tiles = splitBitmap(puzzle, 9, 9);
-        previewImage.setImageBitmap(puzzle);
+        previewImage.setImageBitmap(bmp);
 
 
     }
@@ -260,6 +289,73 @@ public class Result extends AppCompatActivity {
         return maxValIdx;
     }
 
+    private Point[] findCorners(List<Point> box){
+        Point[] vertices = new Point[4];
+        double minX = Integer.MAX_VALUE;
+        double minY = Integer.MAX_VALUE;
+        double maxX = 0;
+        double maxY = 0;
+
+        //Top Left corner of box, where X is the major axis and both X and Y are smallest value
+        for(Point p : box){
+            if(p.x < minX){
+                minX = p.x;
+                minY = p.y;
+            }
+            else if(p.x == minX && p.y < minY){
+                minX = p.x;
+                minY = p.y;
+            }
+        }
+        vertices[0] = new Point(minX, minY);
+        minX = Integer.MAX_VALUE;
+        minY = Integer.MAX_VALUE;
+
+        //Top right corner, where X is the major axis and X greatest value and Y smallest value
+        for(Point p : box){
+            if(p.x > maxX){
+                maxX = p.x;
+                minY = p.y;
+            }
+            else if(p.x == maxX && p.y < minY){
+                maxX = p.x;
+                minY = p.y;
+            }
+        }
+        vertices[1] = new Point(maxX, minY);
+        maxX = 0;
+        minY = Integer.MAX_VALUE;
+
+        //Bottom right corner where Y is major axis and both X and Y are greatest value
+        for(Point p : box){
+            if(p.y > maxY){
+                maxX = p.x;
+                maxY = p.y;
+            }
+            else if(p.y == maxY && p.x > maxX){
+                maxX = p.x;
+                maxY = p.y;
+            }
+        }
+        vertices[2] = new Point(maxX, maxY);
+        maxX = 0;
+        maxY = 0;
+
+        //Bottom right of box where Y is major axis and X is smallest desired with Y largest desired values
+        for(Point p : box){
+            if(p.y > maxY){
+                minX = p.x;
+                maxY = p.y;
+            }
+            else if(p.y == maxY && p.x < minX){
+                minX = p.x;
+                maxY = p.y;
+            }
+        }
+        vertices[3] = new Point(minX, maxY);
+        return vertices;
+    }
+
     private void buildFile(Bitmap bmp){
         // Assume block needs to be inside a Try/Catch block.
         try {
@@ -290,5 +386,74 @@ public class Result extends AppCompatActivity {
             Log.e(TAG, "Directory not created");
         }
         return file;
+    }
+
+    private Mat findLargestRectangle(Mat original_image) {
+        Mat imgSource = original_image;
+        //Mat untouched = original_image.clone();
+
+        //convert the image to black and white
+        Imgproc.cvtColor(imgSource, imgSource, Imgproc.COLOR_BGR2GRAY);
+
+        //convert the image to black and white does (8 bit)
+        Imgproc.Canny(imgSource, imgSource, 50, 50);
+
+        //apply gaussian blur to smoothen lines of dots
+        Imgproc.GaussianBlur(imgSource, imgSource, new Size(5, 5), 5);
+
+        //find the contours
+        List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
+        Imgproc.findContours(imgSource, contours, new Mat(), Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
+
+        double maxArea = -1;
+        int maxAreaIdx = -1;
+        MatOfPoint temp_contour = contours.get(0); //the largest is at the index 0 for starting point
+        MatOfPoint2f approxCurve = new MatOfPoint2f();
+        MatOfPoint2f maxCurve = new MatOfPoint2f();
+        List<MatOfPoint> largest_contours = new ArrayList<MatOfPoint>();
+        for (int idx = 0; idx < contours.size(); idx++) {
+            temp_contour = contours.get(idx);
+            double contourarea = Imgproc.contourArea(temp_contour);
+            //compare this contour to the previous largest contour found
+            if (contourarea > maxArea) {
+                //check if this contour is a square
+                MatOfPoint2f new_mat = new MatOfPoint2f( temp_contour.toArray() );
+                int contourSize = (int)temp_contour.total();
+                Imgproc.approxPolyDP(new_mat, approxCurve, contourSize*0.1, true);
+                if (approxCurve.total() == 4) {
+                    maxCurve = approxCurve;
+                    maxArea = contourarea;
+                    maxAreaIdx = idx;
+                    largest_contours.add(temp_contour);
+                }
+            }
+        }
+
+        //create the new image here using the largest detected square
+        Mat new_image = new Mat(imgSource.size(), CvType.CV_8U); //we will create a new black blank image with the largest contour
+        Imgproc.cvtColor(new_image, new_image, Imgproc.COLOR_BayerBG2RGB);
+        Imgproc.drawContours(new_image, contours, maxAreaIdx, new Scalar(255, 255, 255), 1); //will draw the largest square/rectangle
+
+        double temp_double[] = maxCurve.get(0, 0);
+        Point p1 = new Point(temp_double[0], temp_double[1]);
+        Imgproc.circle(new_image, new Point(p1.x, p1.y), 20, new Scalar(255, 0, 0), 5); //p1 is colored red
+
+
+        temp_double = maxCurve.get(1, 0);
+        Point p2 = new Point(temp_double[0], temp_double[1]);
+        Imgproc.circle(new_image, new Point(p2.x, p2.y), 20, new Scalar(0, 255, 0), 5); //p2 is colored green
+
+
+        temp_double = maxCurve.get(2, 0);
+        Point p3 = new Point(temp_double[0], temp_double[1]);
+        Imgproc.circle(new_image, new Point(p3.x, p3.y), 20, new Scalar(0, 0, 255), 5); //p3 is colored blue
+
+
+        temp_double = maxCurve.get(3, 0);
+        Point p4 = new Point(temp_double[0], temp_double[1]);
+        Imgproc.circle(new_image, new Point(p4.x, p4.y), 20, new Scalar(0, 255, 255), 5); //p1 is colored violet
+
+
+        return new_image;
     }
 }
