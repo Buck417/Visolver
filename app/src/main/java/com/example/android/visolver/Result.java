@@ -137,36 +137,18 @@ public class Result extends AppCompatActivity {
         //This attempts to build a Rect from the points of the largest contour
         //Would need a canvas to draw the Rect on the original image
         MatOfPoint matOfPoint = contours.get(largestContourIdx);
-        MatOfPoint2f  matOfPoint2f = new MatOfPoint2f( matOfPoint.toArray() );
-        //Rect r = Imgproc.boundingRect(matOfPoint);
-
-        double epsilon = Imgproc.arcLength(matOfPoint2f, true);
-        MatOfPoint2f approx = new MatOfPoint2f();
-        Imgproc.approxPolyDP(matOfPoint2f, approx, epsilon, true);
-        MatOfPoint returnedMat = new MatOfPoint(approx.toArray());
-        contours.add(returnedMat);
-        Imgproc.drawContours(myImg, contours, contours.lastIndexOf(returnedMat), new Scalar(0,0,255, 255), 5);
 
         Point[] vertices = findCorners(matOfPoint.toList());
-
-
-
-        //This block finds an approx rect but is not sufficient.
-        /*MatOfPoint2f  matOfPoint2f = new MatOfPoint2f( matOfPoint.toArray() );
-        RotatedRect r = Imgproc.minAreaRect(matOfPoint2f);
-        Point[] vertices = new Point[4];
-        r.points(vertices);
-        Imgproc.line(myImg, vertices[3], vertices[0],new Scalar(255, 0, 0),2 );
+        double distance = Math.hypot(Math.abs(vertices[1].x - vertices[0].x), Math.abs(vertices[1].y - vertices[0].y));
         for(int i = 0; i < 3; i++){
-            Imgproc.line(myImg, vertices[i], vertices[i+1], new Scalar(255, 0, 0),2);
-        }*/
+            distance = Math.max(distance, Math.hypot(Math.abs(vertices[i+1].x - vertices[i].x), Math.abs(vertices[i+1].y - vertices[i].y)));
+        }
 
 
-
-        /*Log.i(TAG, "Top left corner value is " + vertices[0].x + " " + vertices[0].y);
-        Log.i(TAG, "Bottom left value is " + vertices[1].x + " " + vertices[1].y);
-        Log.i(TAG, "Top right value is " + vertices[2].x + " " + vertices[2].y);
-        Log.i(TAG, "Bottom corner value is " + vertices[3].x + " " + vertices[3].y);*/
+        Log.i(TAG, "Top left corner value is " + vertices[0].x + " " + vertices[0].y);
+        Log.i(TAG, "Top right value is " + vertices[1].x + " " + vertices[1].y);
+        Log.i(TAG, "Bottom right value is " + vertices[2].x + " " + vertices[2].y);
+        Log.i(TAG, "Bottom left value is " + vertices[3].x + " " + vertices[3].y);
         //Log.i(TAG, "Total height is " + r.height);
         //Log.i(TAG, "Total width is " + r.width);
         //Bitmap puzzle = Bitmap.createBitmap(bmp, r.x, r.y, r.width, r.height);
@@ -291,68 +273,40 @@ public class Result extends AppCompatActivity {
 
     private Point[] findCorners(List<Point> box){
         Point[] vertices = new Point[4];
-        double minX = Integer.MAX_VALUE;
-        double minY = Integer.MAX_VALUE;
-        double maxX = 0;
-        double maxY = 0;
+        double topLeftX, topLeftY;
+        double topRightX, topRightY;
+        double bottomRightX, bottomRightY;
+        double bottomLeftX, bottomLeftY;
+        topLeftX = topLeftY = bottomLeftX = bottomLeftY = Integer.MAX_VALUE;
+        topRightX = topRightY = bottomRightX = bottomRightY = 0;
 
-        //Top Left corner of box, where X is the major axis and both X and Y are smallest value
+
         for(Point p : box){
-            if(p.x < minX){
-                minX = p.x;
-                minY = p.y;
+            //Minimize x+y for top left corner
+            if((p.x+p.y) < (topLeftX + topLeftY)){
+                topLeftX = p.x;
+                topLeftY = p.y;
             }
-            else if(p.x == minX && p.y < minY){
-                minX = p.x;
-                minY = p.y;
+            //Maximize x-y for top right corner
+            if((p.x-p.y) > (topRightX - topRightY)){
+                topRightX = p.x;
+                topRightY = p.y;
+            }
+            //Maximize x+y for bottom right corner
+            if((p.x+p.y) > (bottomRightX + bottomRightY)){
+                bottomRightX = p.x;
+                bottomRightY = p.y;
+            }
+            //Minimize x-y for bottom left corner
+            if((p.x-p.y) < (bottomLeftX - bottomLeftY)){
+                bottomLeftX = p.x;
+                bottomLeftY = p.y;
             }
         }
-        vertices[0] = new Point(minX, minY);
-        minX = Integer.MAX_VALUE;
-        minY = Integer.MAX_VALUE;
-
-        //Top right corner, where X is the major axis and X greatest value and Y smallest value
-        for(Point p : box){
-            if(p.x > maxX){
-                maxX = p.x;
-                minY = p.y;
-            }
-            else if(p.x == maxX && p.y < minY){
-                maxX = p.x;
-                minY = p.y;
-            }
-        }
-        vertices[1] = new Point(maxX, minY);
-        maxX = 0;
-        minY = Integer.MAX_VALUE;
-
-        //Bottom right corner where Y is major axis and both X and Y are greatest value
-        for(Point p : box){
-            if(p.y > maxY){
-                maxX = p.x;
-                maxY = p.y;
-            }
-            else if(p.y == maxY && p.x > maxX){
-                maxX = p.x;
-                maxY = p.y;
-            }
-        }
-        vertices[2] = new Point(maxX, maxY);
-        maxX = 0;
-        maxY = 0;
-
-        //Bottom right of box where Y is major axis and X is smallest desired with Y largest desired values
-        for(Point p : box){
-            if(p.y > maxY){
-                minX = p.x;
-                maxY = p.y;
-            }
-            else if(p.y == maxY && p.x < minX){
-                minX = p.x;
-                maxY = p.y;
-            }
-        }
-        vertices[3] = new Point(minX, maxY);
+        vertices[0] = new Point(topLeftX, topLeftY);
+        vertices[1] = new Point(topRightX, topRightY);
+        vertices[2] = new Point(bottomRightX, bottomRightY);
+        vertices[3] = new Point(bottomLeftX, bottomLeftY);
         return vertices;
     }
 

@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.hardware.Camera;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Environment;
@@ -301,15 +302,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private boolean isNumeric(String value){
-        try{
-            int number = Integer.parseInt(value);
-        }
-        catch(NumberFormatException e){
-            return false;
-        }
-        return true;
-    }
+
 
     private Bitmap resolveOrientation(Bitmap bitmap, int degree){
         Matrix matrix = new Matrix();
