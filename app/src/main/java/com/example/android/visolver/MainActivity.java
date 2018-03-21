@@ -8,6 +8,7 @@ import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
@@ -33,6 +34,7 @@ import com.google.android.gms.vision.text.TextRecognizer;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -78,6 +80,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         preview_img = (SurfaceView) findViewById(R.id.surface_view);
         textView = (TextView) findViewById(R.id.text_view);
         pictureText = (TextView) findViewById(R.id.picture_text);
+
+        new LoadTrainedData().execute();
 
         TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
         if (!textRecognizer.isOperational()) {
@@ -309,5 +313,51 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         matrix.postRotate(degree);
         Bitmap rotatedImage = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
         return rotatedImage;
+    }
+
+    private class LoadTrainedData extends AsyncTask<Void, Void, Void>{
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            copyTrainedData();
+            return null;
+        }
+
+        private void copyTrainedData(){
+            final String path = Environment.getExternalStorageDirectory().getAbsolutePath() + getApplicationContext().getPackageName();
+            final String dir = getResources().getString(R.string.directory);
+            final String fName = getResources().getString(R.string.filename);
+            try{
+                File directory = new File(path + dir);
+                File file = new File(path + dir + fName);
+
+                if(!(file.exists())){
+                    InputStream is = getApplicationContext().getAssets().open(dir + fName);
+
+                   if(directory.mkdirs()){
+                       Log.i(TAG, "Successfully made tess data folder");
+                   }
+                   else{
+                       Log.i(TAG, "Couldn't make tess data folder properly");
+                   }
+
+                   byte[] buffer = new byte[1024];
+                    FileOutputStream os = new FileOutputStream(file);
+
+                    int length;
+                    while((length = is.read(buffer)) > 0){
+                        os.write(buffer, 0, length);
+                    }
+                    is.close();
+                    os.close();
+                    Log.i(TAG, "Tess data successfully copied");
+                }
+
+            }
+            catch (IOException e){
+                Log.e(TAG, "Error trying to open Tesseract training data");
+                e.printStackTrace();
+            }
+        }
     }
 }

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Visolver</string>
+    <string name="directory">/tessdata/</string>
+    <string name="filename">eng.traineddata</string>
 </resources>
