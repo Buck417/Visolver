@@ -3,6 +3,7 @@ package com.example.android.visolver;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.Camera;
@@ -81,7 +82,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         textView = (TextView) findViewById(R.id.text_view);
         pictureText = (TextView) findViewById(R.id.picture_text);
 
-        new LoadTrainedData().execute();
+        //new LoadTrainedData().execute();
+        AssetManager assetManager = getAssets();
+        TessOCR tessOCR = new TessOCR(assetManager);
 
         TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
         if (!textRecognizer.isOperational()) {

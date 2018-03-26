@@ -1,6 +1,7 @@
 package com.example.android.visolver;
 
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -112,8 +113,10 @@ public class Result extends AppCompatActivity {
         org.opencv.core.Size s = new Size(5, 5);
         Mat blurImg = new Mat();
         Imgproc.GaussianBlur(grayImg, blurImg, s, 5, 5);
+        Mat medianBlur = new Mat();
+        Imgproc.medianBlur(blurImg, medianBlur, 5);
         Mat threshImg = new Mat();
-        Imgproc.adaptiveThreshold(blurImg, threshImg, 255, 1, 1, 11, 2);
+        Imgproc.adaptiveThreshold(medianBlur, threshImg, 255, 1, 1, 11, 2);
 
         ArrayList<MatOfPoint> contours = new ArrayList<>();
         Mat hierarchy = new Mat();
@@ -239,7 +242,7 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Dims of dst is " + destMat.dims());
 
         Imgproc.warpPerspective(srcMat, destMat, result, destMat.size());*/
-        Bitmap bmp2 = Bitmap.createBitmap(output.width(), output.height(), Bitmap.Config.RGB_565);
+        Bitmap bmp2 = Bitmap.createBitmap(output.width(), output.height(), Bitmap.Config.ARGB_8888);
 
         Utils.matToBitmap(output, bmp2);
 
@@ -256,12 +259,24 @@ public class Result extends AppCompatActivity {
                 buildFile(tiles[i][j], filename);
             }
         }*/
-        previewImage.setImageBitmap(bmp2);
+        AssetManager assetManager = getAssets();
+        TessOCR tessOCR = new TessOCR(assetManager);
+        Bitmap bmp22 = tiles[4][3];
+        Mat testMat = new Mat();
+        Utils.bitmapToMat(bmp22, testMat);
+        
+
+        previewImage.setImageBitmap(bmp22);
+        String myNumber = tessOCR.getResults(bmp22);
+        resultView.setText(myNumber);
+
 
 
     }
 
     private Bitmap[][] splitBitmap(Bitmap bitmap, int xCount, int yCount) {
+        int widthCutoff = 30;
+        int heightCutoff = 30;
         // Allocate a two dimensional array to hold the individual images.
         Bitmap[][] bitmaps = new Bitmap[xCount][yCount];
         int width, height;
@@ -273,7 +288,7 @@ public class Result extends AppCompatActivity {
         for(int x = 0; x < xCount; ++x) {
             for(int y = 0; y < yCount; ++y) {
                 // Create the sliced bitmap
-                bitmaps[x][y] = Bitmap.createBitmap(bitmap, x * width, y * height, width, height);
+                bitmaps[x][y] = Bitmap.createBitmap(bitmap, (x * width) + widthCutoff, y * height + heightCutoff, width-widthCutoff, height - heightCutoff);
             }
         }
         // Return the array
