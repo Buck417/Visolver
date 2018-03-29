@@ -2,6 +2,7 @@ package com.example.android.visolver;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.os.Environment;
 import android.util.Log;
 
@@ -78,9 +79,10 @@ public class TessOCR {
     }
 
 
-    public String getResults(Bitmap bitmap)
+    public String getResults(Bitmap bitmap, org.opencv.core.Rect rect)
     {
         mTess.setImage(bitmap);
+        mTess.setRectangle(rect.x, rect.y, rect.width, rect.height);
         String result = mTess.getUTF8Text();
         return result;
     }
