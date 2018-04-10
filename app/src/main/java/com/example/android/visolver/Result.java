@@ -4,9 +4,6 @@ import android.content.Intent;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -20,23 +17,17 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
-import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.utils.Converters;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -175,14 +166,16 @@ public class Result extends AppCompatActivity {
         Bitmap gridBitmap = Bitmap.createBitmap(output.width(), output.height(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(output, gridBitmap);
 
+        //Bitmap scaledGrid = Bitmap.createScaledBitmap(gridBitmap, (int)(gridBitmap.getWidth()*1.8),(int) (gridBitmap.getHeight() * 1.8), true);
+
         //Prepare this new bitmap of the grid for OCR processing. Read the book
         //Mat gridThreshImg = imp.buildThresholdMat(gridBitmap);
         //Utils.matToBitmap(gridThreshImg, gridBitmap);
 
 
-
+        Log.i(TAG, "Density of Gridmap is " + gridBitmap.getDensity());
         Bitmap[][] tiles = splitBitmap(gridBitmap, 9, 9);
-        ocrTiles = gridDigits(tiles);
+        ocrTiles = processCells(tiles);
         /*for(int i = 0; i < 9; i++){
             for(int j = 0; j < 9; j++){
                 String filename = "fixedgrid" + i + "" + j;
@@ -201,7 +194,7 @@ public class Result extends AppCompatActivity {
         //Bitmap testImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.grid43);
         new PerformOCR().execute();
         //String[][] sudokuDigits = new String[9][9];
-        //makeGrid(ocrTiles, sudokuDigits);
+        //gridOCR(ocrTiles, sudokuDigits);
         //writeToTextFile(sudokuDigits);
         //previewImage.setImageBitmap(gridBitmap);
         //resultView.setText(myNumber);
@@ -211,62 +204,50 @@ public class Result extends AppCompatActivity {
 
         previewImage.setImageBitmap(gridBitmap);
 
-        //BUILD GRAYSCALE OF ALL TILES, RUN OCR ON THEM TO SEE WHAT RETURNS CAUSE THE IMAGES LOOK DECENT
-
 
     }
 
-    private void writeToTextFile(String[][] sudokuDigits) {
-        try{
-            String path = Environment.getExternalStorageDirectory().toString() + "/grid";
-            File file = new File(path, "grid.txt");
-            FileWriter fWrite = new FileWriter(file);
-            fWrite.append("-----------------");
-            for(int i = 0; i < 9; i++){
-                StringBuilder sb = new StringBuilder();
-                sb.append("|");
-                for(int j = 0; j < 9; j++){
-                    sb.append(sudokuDigits[i][j] + "|");
-                }
-                sb.append("\n");
-                fWrite.append(sb.toString());
-            }
-            fWrite.append("-------------------");
-            fWrite.flush();
-            fWrite.close();
-        } catch(IOException e){
-            Log.e(TAG, "Issue building text file");
-            e.printStackTrace();
-        }
 
-    }
-
-    private void makeGrid(Bitmap[][] tiles) {
+    private void gridOCR(Bitmap[][] tiles, int rows, int columns) {
+        String[][] gridData = new String[rows][columns];
         AssetManager assetManager = getAssets();
         TessOCR tessOCR = new TessOCR(assetManager);
         //String ocrText = tessOCR.getResults(tiles[0][1], contourRects[0][1]);
         //Log.i(TAG, "Text found in square " + 0 + "" + 1 + " is " + ocrText);
-        for(int i = 0; i < 2; i++){
-            for(int j = 0; j < 2; j++){
+        for(int i = 0; i < rows; i++){
+            for(int j = 0; j < columns; j++){
                 String ocrText = tessOCR.getResults(tiles[i][j], contourRects[i][j]);
                 if(ocrText.equals("")){
-                    ocrText = "empty";
+                    ocrText = "-";
 
                 }
-                String filename = "fixedgrid" + i + "" + j;
-                buildFile(tiles[i][j], filename);
                 Log.i(TAG, "Text found in square " + i + "" + j + " is " + ocrText);
+                gridData[i][j] = ocrText;
+                Log.i(TAG, "Bitmap pixel count is " + tiles[i][j].getWidth() + " " + tiles[i][j].getHeight());
             }
         }
+        printGrid(gridData, rows, columns);
     }
 
-    private Bitmap[][] gridDigits(Bitmap[][] originalTiles){
+    private void printGrid(String[][] gridData, int rows, int columns) {
+        StringBuilder sb = new StringBuilder();
+        for(int i = 0; i < rows; i++){
+            for(int j = 0; j < columns; j++){
+                sb.append(gridData[i][j] + " ");
+            }
+            sb.append("\n");
+        }
+        Log.i(TAG, sb.toString());
+    }
+
+    private Bitmap[][] processCells(Bitmap[][] originalTiles){
         Bitmap[][] results = new Bitmap[9][9];
         ImageProcessing im = new ImageProcessing();
         contourRects = new Rect[9][9];
         for(int i = 0; i < 9; i++){
             for(int j = 0; j < 9; j++){
-                Mat matTile = im.buildThresholdMat(originalTiles[i][j]);
+                Bitmap scaledBitmap = Bitmap.createScaledBitmap(originalTiles[i][j], originalTiles[i][j].getWidth()*2, originalTiles[i][j].getHeight()*2, true);
+                Mat matTile = im.buildThresholdMat(scaledBitmap);
                 ArrayList<MatOfPoint> tileContours = new ArrayList<>();
                 Imgproc.findContours(matTile, tileContours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
                 int largest = getMaxContour(tileContours);
@@ -279,6 +260,8 @@ public class Result extends AppCompatActivity {
                 }
                 Utils.matToBitmap(testTile, gridBitmap);
                 results[i][j] = gridBitmap;
+                String filename = "fixedgrid" + i + "" + j;
+                buildFile(results[i][j], filename);
 
 
             }
@@ -336,7 +319,6 @@ public class Result extends AppCompatActivity {
         double bottomLeftX, bottomLeftY;
         topLeftX = topLeftY = bottomLeftX = bottomLeftY = Integer.MAX_VALUE;
         topRightX = topRightY = bottomRightX = bottomRightY = 0;
-
 
         for(Point p : box){
             //Minimize x+y for top left corner
@@ -404,7 +386,7 @@ public class Result extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(Void... params) {
-            makeGrid(ocrTiles);
+            gridOCR(ocrTiles, 9, 9);
             return null;
         }
 
