@@ -47,6 +47,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button camera_button;
     private SurfaceView preview_img;
     private final int RequestCameraPermissionID = 1001;
+    private final int RequestWriteExternalStoragePermissionID = 1002;
     private CameraSource cameraSource;
     private TextView textView;
     private TextView pictureText;
@@ -106,6 +107,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             ActivityCompat.requestPermissions(MainActivity.this,
                                     new String[]{Manifest.permission.CAMERA},
                                     RequestCameraPermissionID);
+                            return;
+                        }
+                        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+
+                            ActivityCompat.requestPermissions(MainActivity.this,
+                                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                                    RequestWriteExternalStoragePermissionID);
                             return;
                         }
                         cameraSource.start(preview_img.getHolder());
@@ -189,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (myPic.exists()) {
                 Bitmap myBitmap = constructBitmap(myPic);
 
-                createFile(myBitmap);
+                //createFile(myBitmap);
                 detectText(myBitmap);
                 //ImageView myImage = (ImageView) findViewById(R.id.preview);
                 //myImage.setImageBitmap(myBitmap);
@@ -197,7 +205,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void createFile(Bitmap myBitmap) {
+    /*private void createFile(Bitmap myBitmap) {
         File photoFile = null;
         try {
             photoFile = createImageFile();
@@ -218,7 +226,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mOriginalPhotoPath = photoFile.getPath();
         }
 
-    }
+    }*/
 
     String mOriginalPhotoPath;
 
@@ -318,49 +326,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return rotatedImage;
     }
 
-    private class LoadTrainedData extends AsyncTask<Void, Void, Void>{
 
-        @Override
-        protected Void doInBackground(Void... params) {
-            copyTrainedData();
-            return null;
-        }
-
-        private void copyTrainedData(){
-            final String path = Environment.getExternalStorageDirectory().getAbsolutePath() + getApplicationContext().getPackageName();
-            final String dir = getResources().getString(R.string.directory);
-            final String fName = getResources().getString(R.string.filename);
-            try{
-                File directory = new File(path + dir);
-                File file = new File(path + dir + fName);
-
-                if(!(file.exists())){
-                    InputStream is = getApplicationContext().getAssets().open(dir + fName);
-
-                   if(directory.mkdirs()){
-                       Log.i(TAG, "Successfully made tess data folder");
-                   }
-                   else{
-                       Log.i(TAG, "Couldn't make tess data folder properly");
-                   }
-
-                   byte[] buffer = new byte[1024];
-                    FileOutputStream os = new FileOutputStream(file);
-
-                    int length;
-                    while((length = is.read(buffer)) > 0){
-                        os.write(buffer, 0, length);
-                    }
-                    is.close();
-                    os.close();
-                    Log.i(TAG, "Tess data successfully copied");
-                }
-
-            }
-            catch (IOException e){
-                Log.e(TAG, "Error trying to open Tesseract training data");
-                e.printStackTrace();
-            }
-        }
-    }
 }

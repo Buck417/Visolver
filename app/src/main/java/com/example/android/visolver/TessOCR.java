@@ -72,8 +72,8 @@ public class TessOCR {
         mTess.setDebug(true);
         mTess.init(DATA_PATH, lang);
         mTess.setPageSegMode(TessBaseAPI.PageSegMode.PSM_SINGLE_LINE);
-        mTess.setVariable(TessBaseAPI.VAR_CHAR_BLACKLIST, ".,!?@#$%&*()<>_-+=/:;'\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-        mTess.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "0123456789");
+        mTess.setVariable(TessBaseAPI.VAR_CHAR_BLACKLIST, ".,!?@#$%&*()<>_-+=/:;'\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0");
+        mTess.setVariable(TessBaseAPI.VAR_CHAR_WHITELIST, "123456789");
         mTess.setVariable("classify_bln_numeric_mode", "1");
 
     }
