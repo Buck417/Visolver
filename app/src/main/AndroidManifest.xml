@@ -43,6 +43,8 @@
             android:value="ocr" />
 
         <activity android:name=".Result"></activity>
+        <activity android:name=".CameraActivity"
+                  android:screenOrientation="portrait"></activity>
     </application>
 
 </manifest>
