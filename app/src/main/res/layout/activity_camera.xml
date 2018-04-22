@@ -70,7 +70,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@color/transparent"
-                android:onClick="flipClick"
                 android:padding="4dp"
                 android:src="@drawable/camera_flip"/>
 
@@ -91,7 +90,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@color/transparent"
-                android:onClick="flashClick"
                 android:paddingBottom="4dp"
                 android:paddingLeft="10dp"
                 android:paddingRight="10dp"
@@ -132,13 +130,12 @@
 
 
                 <ImageButton
-                    android:id="@+id/imageButton1"
+                    android:id="@+id/picButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="2dp"
                     android:layout_marginTop="2dp"
                     android:background="@color/transparent"
-                    android:onClick="captureClick"
                     android:src="@drawable/capture_button"/>
 
                 <TextView

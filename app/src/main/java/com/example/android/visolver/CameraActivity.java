@@ -1,15 +1,23 @@
 package com.example.android.visolver;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.hardware.Camera;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -36,11 +44,30 @@ public class CameraActivity extends Activity {
     private PreviewCamera mPreview;
     private Camera mCamera;
     private Button picButton;
+    private String mOriginalPhotoPath;
+    private CamUtils camUtils;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setupCamera();
 
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Stop camera access
+        releaseCamera();
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+        setupCamera();
+    }
+
+    private void setupCamera(){
         // Open an instance of the first camera and retrieve its info.
         mCamera = getCameraInstance(CAMERA_ID);
         Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
@@ -52,6 +79,8 @@ public class CameraActivity extends Activity {
             setContentView(R.layout.activity_camera_unavailable);
         } else {
 
+            camUtils = new CamUtils(mCamera);
+
             setContentView(R.layout.activity_camera);
 
             // Get the rotation of the screen to adjust the preview image accordingly.
@@ -62,14 +91,19 @@ public class CameraActivity extends Activity {
             mPreview = new PreviewCamera(this, mCamera, cameraInfo, displayRotation);
             RelativeLayout preview = (RelativeLayout) findViewById(R.id.rlPreview);
             preview.addView(mPreview);
-        }
-    }
 
-    @Override
-    public void onPause() {
-        super.onPause();
-        // Stop camera access
-        releaseCamera();
+            // Add a listener to the Capture button
+            ImageButton captureButton = (ImageButton) findViewById(R.id.picButton);
+            captureButton.setOnClickListener(
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // get an image from the camera
+                            mCamera.takePicture(null, null, mPicture);
+                        }
+                    }
+            );
+        }
     }
 
     /** A safe way to get an instance of the Camera object. */
@@ -92,23 +126,89 @@ public class CameraActivity extends Activity {
         }
     }
 
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = new File(
+                imageFileName +  /* prefix */
+                ".jpg" +         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mOriginalPhotoPath = image.getAbsolutePath();
+        Log.i(TAG, "The file location is: " + image.getAbsolutePath().toString());
+        return image;
+    }
+
+    private void showPictureIntent(){
+        Intent showPicture = new Intent(this, ShowPictureActivity.class);
+        showPicture.putExtra("PATH", mOriginalPhotoPath);
+        startActivity(showPicture);
+    }
+
+    private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+
+        @Override
+        public void onPictureTaken(byte[] data, Camera camera) {
+
+            Bitmap pictureBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            Bitmap myBmp = resolveOrientation(pictureBitmap, 90);
+            try {
+
+                File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+                if (pictureFile == null){
+                    Log.d(TAG, "Error creating media file, check storage permissions");
+                    return;
+                }
+                FileOutputStream fos = new FileOutputStream(pictureFile);
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                myBmp.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                byte[] newData = stream.toByteArray();
+                fos.write(newData);
+                fos.close();
+                mOriginalPhotoPath = pictureFile.getAbsolutePath();
+            } catch (FileNotFoundException e) {
+                Log.d(TAG, "File not found: " + e.getMessage());
+            } catch (IOException e) {
+                Log.d(TAG, "Error accessing file: " + e.getMessage());
+            }
+
+            if(mOriginalPhotoPath != null){
+                //camUtils.identifyRotation(mOriginalPhotoPath);
+                showPictureIntent();
+            }
+
+        }
+    };
+
+
+    public static final int MEDIA_TYPE_IMAGE = 1;
+    public static final int MEDIA_TYPE_VIDEO = 2;
+
+    /** Create a file Uri for saving an image or video */
+    private Uri getOutputMediaFileUri(int type){
+        return Uri.fromFile(getOutputMediaFile(type));
+    }
+
     /** Create a File for saving an image or video */
-    private static File getOutputMediaFile(int type){
+    private File getOutputMediaFile(int type){
         // To be safe, you should check that the SDCard is mounted
         // using Environment.getExternalStorageState() before doing this.
 
-        File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "MyCameraApp");
+        File mediaStorageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         // This location works best if you want the created images to be shared
         // between applications and persist after your app has been uninstalled.
 
         // Create the storage directory if it does not exist
-        if (! mediaStorageDir.exists()){
+        /*if (! mediaStorageDir.exists()){
             if (! mediaStorageDir.mkdirs()){
-                Log.d("MyCameraApp", "failed to create directory");
+                Log.d("Visolver", "failed to create directory");
                 return null;
             }
-        }
+        }*/
 
         // Create a media file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
@@ -126,26 +226,11 @@ public class CameraActivity extends Activity {
         return mediaFile;
     }
 
-    private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+    private Bitmap resolveOrientation(Bitmap bitmap, int degree){
+        Matrix matrix = new Matrix();
+        matrix.postRotate(degree);
+        Bitmap rotatedImage = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        return rotatedImage;
+    }
 
-        @Override
-        public void onPictureTaken(byte[] data, Camera camera) {
-
-            File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
-            if (pictureFile == null){
-                Log.d(TAG, "Error creating media file, check storage permissions");
-                return;
-            }
-
-            try {
-                FileOutputStream fos = new FileOutputStream(pictureFile);
-                fos.write(data);
-                fos.close();
-            } catch (FileNotFoundException e) {
-                Log.d(TAG, "File not found: " + e.getMessage());
-            } catch (IOException e) {
-                Log.d(TAG, "Error accessing file: " + e.getMessage());
-            }
-        }
-    };
 }

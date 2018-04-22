@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                         Log.i("Permissions","Permissions Denied");
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            if (shouldShowRequestPermissionRationale(CAMERA)) {
+                            if (shouldShowRequestPermissionRationale(CAMERA) || shouldShowRequestPermissionRationale(WRITE_EXTERNAL_STORAGE)) {
                                 showMessageOKCancel("You need to allow access to both the permissions",
                                         new DialogInterface.OnClickListener() {
                                             @Override
@@ -134,6 +134,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         preview_img = (SurfaceView) findViewById(R.id.surface_view);
         textView = (TextView) findViewById(R.id.text_view);
         pictureText = (TextView) findViewById(R.id.picture_text);
+
+        if(!checkPermission()){
+            requestPermission();
+        }
 
 
 
@@ -236,7 +240,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }*/
     }
 
-    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+    /*protected void onActivityResult(int requestCode, int resultCode, Intent data){
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             File myPic = new File(mOriginalPhotoPath);
             if (myPic.exists()) {
@@ -248,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 //myImage.setImageBitmap(myBitmap);
             }
         }
-    }
+    }*/
 
     /*private void createFile(Bitmap myBitmap) {
         File photoFile = null;
@@ -273,23 +277,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }*/
 
-    String mOriginalPhotoPath;
 
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
-        );
 
-        // Save a file: path for use with ACTION_VIEW intents
-        mOriginalPhotoPath = image.getAbsolutePath();
-        return image;
-    }
+
 
     @Override
     public void onClick(View v) {
@@ -298,7 +288,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void detectText(Bitmap image){
+    /*private void detectText(Bitmap image){
         Frame imageFrame = new Frame.Builder().setBitmap(image).build();
 
         TextRecognizer textRecognizer = new TextRecognizer.Builder(getApplicationContext()).build();
@@ -335,39 +325,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
         textRecognizer.release();
-    }
+    }*/
 
-    private Bitmap constructBitmap(File imgFile){
-        ExifInterface exif = null;
-        try{
-            exif = new ExifInterface(mOriginalPhotoPath);
-        }
-        catch(IOException e){
-            e.printStackTrace();
-        }
-        Bitmap myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
-        int orientValue = exif.getAttributeInt(exif.TAG_ORIENTATION, exif.ORIENTATION_NORMAL);
-        switch(orientValue){
-            case ExifInterface.ORIENTATION_ROTATE_90:
-               return resolveOrientation(myBitmap, 90);
-
-            case ExifInterface.ORIENTATION_ROTATE_180:
-                return resolveOrientation(myBitmap, 180);
-
-            case ExifInterface.ORIENTATION_ROTATE_270:
-                return resolveOrientation(myBitmap, 270);
-
-            default:
-                return myBitmap;
-        }
-    }
-
-    private Bitmap resolveOrientation(Bitmap bitmap, int degree){
-        Matrix matrix = new Matrix();
-        matrix.postRotate(degree);
-        Bitmap rotatedImage = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-        return rotatedImage;
-    }
+    /**/
 
 
 }

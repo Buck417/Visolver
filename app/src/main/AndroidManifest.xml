@@ -45,6 +45,7 @@
         <activity android:name=".Result"></activity>
         <activity android:name=".CameraActivity"
                   android:screenOrientation="portrait"></activity>
+        <activity android:name=".ShowPictureActivity"></activity>
     </application>
 
 </manifest>
