@@ -99,7 +99,27 @@ public class CameraActivity extends Activity {
                         @Override
                         public void onClick(View v) {
                             // get an image from the camera
-                            mCamera.takePicture(null, null, mPicture);
+                            if(camUtils.hasAutofocus()){
+                                mCamera.autoFocus(new Camera.AutoFocusCallback() {
+
+                                    @Override
+                                    public void onAutoFocus(boolean success, Camera camera) {
+                                        try{
+                                            mCamera.takePicture(null, null, mPicture);
+                                        } catch (RuntimeException e){
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                });
+                            }
+                            else{
+                                try{
+                                    mCamera.takePicture(null, null, mPicture);
+                                } catch (RuntimeException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
                         }
                     }
             );
@@ -155,7 +175,11 @@ public class CameraActivity extends Activity {
         public void onPictureTaken(byte[] data, Camera camera) {
 
             Bitmap pictureBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-            Bitmap myBmp = resolveOrientation(pictureBitmap, 90);
+
+            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+            camera.getCameraInfo(CAMERA_ID, cameraInfo);
+
+            Bitmap orientedBitmap = camUtils.identifyRotation(pictureBitmap, cameraInfo.orientation);
             try {
 
                 File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
@@ -165,7 +189,7 @@ public class CameraActivity extends Activity {
                 }
                 FileOutputStream fos = new FileOutputStream(pictureFile);
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                myBmp.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                orientedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
                 byte[] newData = stream.toByteArray();
                 fos.write(newData);
                 fos.close();

@@ -30,12 +30,6 @@ import android.widget.Button;
 import android.graphics.Bitmap;
 import android.widget.TextView;
 
-import com.google.android.gms.vision.CameraSource;
-import com.google.android.gms.vision.Detector;
-import com.google.android.gms.vision.Frame;
-import com.google.android.gms.vision.text.TextBlock;
-import com.google.android.gms.vision.text.TextRecognizer;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -56,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button camera_button;
     private SurfaceView preview_img;
     private final int PERMISSION_REQUEST_CODE = 1001;
-    private CameraSource cameraSource;
+    //private CameraSource cameraSource;
     private TextView textView;
     private TextView pictureText;
 

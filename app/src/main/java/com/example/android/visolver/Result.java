@@ -38,13 +38,13 @@ public class Result extends AppCompatActivity {
 
     private static final String TAG = "Result";
 
-    TextView resultView;
-    ImageView previewImage;
+    private TextView resultView;
+    private ImageView previewImage;
     private Bitmap originalImage;
     private Bitmap sudokuImage;
-    String picPath;
-    Rect[][] contourRects;
-    Bitmap[][] ocrTiles;
+    private String picPath;
+    private Rect[][] contourRects;
+    private Bitmap[][] ocrTiles;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -73,12 +73,9 @@ public class Result extends AppCompatActivity {
         previewImage = (ImageView) findViewById(R.id.preview_image);
 
         Intent myIntent = getIntent();
-        if(myIntent.hasExtra("RESULTS")){
-            String results = myIntent.getStringExtra("RESULTS");
-            Log.v(TAG, results);
-            resultView.setText(results);
-            picPath = myIntent.getStringExtra("BITMAP");
-            File myPic = new File(myIntent.getStringExtra("BITMAP"));
+        if(myIntent.hasExtra("PATH")){
+            picPath = myIntent.getStringExtra("PATH");
+            File myPic = new File(myIntent.getStringExtra("PATH"));
             if(myPic.exists()){
                 originalImage = BitmapFactory.decodeFile(myPic.getAbsolutePath());
             }
@@ -106,6 +103,7 @@ public class Result extends AppCompatActivity {
         //Mat of original image for warping
         Mat srcMat = new Mat();
         Utils.bitmapToMat(srcBmp, srcMat);
+        buildFile(srcBmp, "grid2");
 
         ArrayList<MatOfPoint> contours = new ArrayList<>();
         Imgproc.findContours(threshImg, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -174,12 +172,13 @@ public class Result extends AppCompatActivity {
 
 
         Log.i(TAG, "Density of Gridmap is " + gridBitmap.getDensity());
-        Bitmap[][] tiles = splitBitmap(gridBitmap, 9, 9);
-        ocrTiles = processCells(tiles);
+
+        //Bitmap[][] tiles = splitBitmap(gridBitmap, 9, 9);
+        //ocrTiles = processCells(tiles);
         /*for(int i = 0; i < 9; i++){
             for(int j = 0; j < 9; j++){
                 String filename = "fixedgrid" + i + "" + j;
-                buildFile(fixedTiles[i][j], filename);
+                buildFile(tiles[i][j], filename);
             }
         }*/
 
@@ -192,7 +191,7 @@ public class Result extends AppCompatActivity {
         //Utils.bitmapToMat(bmp22, testMat);
 
         //Bitmap testImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.grid43);
-        new PerformOCR().execute();
+        //new PerformOCR().execute();
         //String[][] sudokuDigits = new String[9][9];
         //gridOCR(ocrTiles, sudokuDigits);
         //writeToTextFile(sudokuDigits);
@@ -357,7 +356,7 @@ public class Result extends AppCompatActivity {
             Integer counter = 0;
             File file = new File(path, filename + ".jpeg"); // the File to save , append increasing numeric counter to prevent files from getting overwritten.
             fOut = new FileOutputStream(file);
-            bmp.compress(Bitmap.CompressFormat.JPEG, 0, fOut);
+            bmp.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
             fOut.flush(); // Not really required
             fOut.close(); // do not forget to close the stream
             MediaStore.Images.Media.insertImage(getContentResolver(),file.getAbsolutePath(),file.getName(),file.getName());
