@@ -43,7 +43,9 @@ public class CamUtils {
         mSize = params.getPictureSize();
         Log.i(TAG, "Used resolution: " + mSize.width + " " + mSize.height);
 
-
+        params.setPictureSize(2560, 1440);
+        params.setPreviewSize(2560, 1440);
+        params.set("shutter-speed", 9);
         mCamera.setParameters(params);
     }
 

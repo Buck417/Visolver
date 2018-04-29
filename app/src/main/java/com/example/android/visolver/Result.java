@@ -103,7 +103,6 @@ public class Result extends AppCompatActivity {
         //Mat of original image for warping
         Mat srcMat = new Mat();
         Utils.bitmapToMat(srcBmp, srcMat);
-        buildFile(srcBmp, "grid2");
 
         ArrayList<MatOfPoint> contours = new ArrayList<>();
         Imgproc.findContours(threshImg, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
@@ -146,19 +145,13 @@ public class Result extends AppCompatActivity {
         Log.i(TAG, "Bottom right value is " + srcCorners[2].x + " " + srcCorners[2].y);
         Log.i(TAG, "Bottom left value is " + srcCorners[3].x + " " + srcCorners[3].y);
         Log.i(TAG, "Largest distance is " + distance);*/
-        //Log.i(TAG, "Total height is " + r.height);
-        //Log.i(TAG, "Total width is " + r.width);
-        //Bitmap puzzle = Bitmap.createBitmap(srcBmp, r.x, r.y, r.width, r.height);
-        //Utils.matToBitmap(srcMat, srcBmp);
-        //buildFile(puzzle);
 
-        //Testing circle corner points
+
+        //Draws circle corner points
         /*Imgproc.circle(srcMat, new Point(r.x, r.y), 50, new Scalar(255, 0, 0),2);
         Imgproc.circle(srcMat, new Point(r.x+r.width, r.y), 50, new Scalar(255, 0, 0),2);
         Imgproc.circle(srcMat, new Point(r.x, r.y+r.height), 50, new Scalar(255, 0, 0),2);
-        Imgproc.circle(srcMat, new Point(r.x+r.width, r.y+r.height), 50, new Scalar(255, 0, 0),2);
-        MatOfPoint2f src = new MatOfPoint2f(corners[0], corners[1], corners[2], corners[3]);
-        MatOfPoint testMat = new MatOfPoint(contours.get(maxValIdx));*/
+        Imgproc.circle(srcMat, new Point(r.x+r.width, r.y+r.height), 50, new Scalar(255, 0, 0),2);*/
 
         //Creates new bitmap with the dimensions of the size of the grid identified
         Bitmap gridBitmap = Bitmap.createBitmap(output.width(), output.height(), Bitmap.Config.ARGB_8888);
@@ -166,18 +159,18 @@ public class Result extends AppCompatActivity {
 
         //Bitmap scaledGrid = Bitmap.createScaledBitmap(gridBitmap, (int)(gridBitmap.getWidth()*1.8),(int) (gridBitmap.getHeight() * 1.8), true);
 
-        //Prepare this new bitmap of the grid for OCR processing. Read the book
+        //Prepare this new bitmap of the grid for OCR processing.
         //Mat gridThreshImg = imp.buildThresholdMat(gridBitmap);
         //Utils.matToBitmap(gridThreshImg, gridBitmap);
 
 
         Log.i(TAG, "Density of Gridmap is " + gridBitmap.getDensity());
 
-        //Bitmap[][] tiles = splitBitmap(gridBitmap, 9, 9);
-        //ocrTiles = processCells(tiles);
+        Bitmap[][] tiles = splitBitmap(gridBitmap, 9, 9);
+        ocrTiles = processCells(tiles);
         /*for(int i = 0; i < 9; i++){
             for(int j = 0; j < 9; j++){
-                String filename = "fixedgrid" + i + "" + j;
+                String filename = "original" + i + "" + j;
                 buildFile(tiles[i][j], filename);
             }
         }*/
@@ -191,7 +184,7 @@ public class Result extends AppCompatActivity {
         //Utils.bitmapToMat(bmp22, testMat);
 
         //Bitmap testImage = BitmapFactory.decodeResource(getApplicationContext().getResources(), R.drawable.grid43);
-        //new PerformOCR().execute();
+        new PerformOCR().execute();
         //String[][] sudokuDigits = new String[9][9];
         //gridOCR(ocrTiles, sudokuDigits);
         //writeToTextFile(sudokuDigits);
@@ -204,6 +197,11 @@ public class Result extends AppCompatActivity {
         previewImage.setImageBitmap(gridBitmap);
 
 
+        if(!deletePicture(picPath)){
+            Log.i(TAG, "Couldn't delete file containing picture");
+        }
+
+
     }
 
 
@@ -211,8 +209,6 @@ public class Result extends AppCompatActivity {
         String[][] gridData = new String[rows][columns];
         AssetManager assetManager = getAssets();
         TessOCR tessOCR = new TessOCR(assetManager);
-        //String ocrText = tessOCR.getResults(tiles[0][1], contourRects[0][1]);
-        //Log.i(TAG, "Text found in square " + 0 + "" + 1 + " is " + ocrText);
         for(int i = 0; i < rows; i++){
             for(int j = 0; j < columns; j++){
                 String ocrText = tessOCR.getResults(tiles[i][j], contourRects[i][j]);
@@ -253,7 +249,7 @@ public class Result extends AppCompatActivity {
                 contourRects[i][j] = Imgproc.boundingRect(tileContours.get(largest));
                 Mat testTile = new Mat(matTile.size(), CV_8UC3, new Scalar(0,0,0));
                 Bitmap gridBitmap = Bitmap.createBitmap(testTile.width(), testTile.height(), Bitmap.Config.ARGB_8888);
-                if(Imgproc.contourArea(tileContours.get(largest)) > ((testTile.width() * testTile.height()) / 25.0)) {
+                if(Imgproc.contourArea(tileContours.get(largest)) > ((testTile.width() * testTile.height()) / 50.0)) {
                     Imgproc.drawContours(testTile, tileContours, largest, new Scalar(255, 255, 255, 255), 15);
                     //Imgproc.rectangle(testTile, largestContourRect.tl(), largestContourRect.br(),new Scalar(0, 0, 255, 255), 10);
                 }
@@ -271,8 +267,8 @@ public class Result extends AppCompatActivity {
 
 
     private Bitmap[][] splitBitmap(Bitmap bitmap, int xCount, int yCount) {
-        int widthCutoff = 50;
-        int heightCutoff = 50;
+        int widthCutoff = 30;
+        int heightCutoff = 30;
         // Allocate a two dimensional array to hold the individual images.
         Bitmap[][] bitmaps = new Bitmap[xCount][yCount];
         int width, height;
@@ -369,6 +365,11 @@ public class Result extends AppCompatActivity {
         // saving the Bitmap to a file compressed as a JPEG with 85% compression rate
 
 
+    }
+
+    private boolean deletePicture(String path){
+        File temp = new File(path);
+        return temp.delete();
     }
 
     private class PerformOCR extends AsyncTask<Void, Void, Void>{

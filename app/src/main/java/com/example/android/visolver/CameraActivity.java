@@ -67,6 +67,11 @@ public class CameraActivity extends Activity {
         setupCamera();
     }
 
+    /**
+     * Builds a new camera using CAMERA_ID.
+     * Builds a camUtil object
+     * Starts a click listener for the take photo action.
+     */
     private void setupCamera(){
         // Open an instance of the first camera and retrieve its info.
         mCamera = getCameraInstance(CAMERA_ID);
@@ -126,7 +131,9 @@ public class CameraActivity extends Activity {
         }
     }
 
-    /** A safe way to get an instance of the Camera object. */
+    /**
+     * A safe way to get an instance of the Camera object.
+     */
     private Camera getCameraInstance(int cameraId) {
         Camera c = null;
         try {
@@ -139,6 +146,9 @@ public class CameraActivity extends Activity {
         return c; // returns null if camera is unavailable
     }
 
+    /**
+     * Releases the camera. Used when this activity is left.
+     */
     private void releaseCamera() {
         if (mCamera != null) {
             mCamera.release();        // release the camera for other applications
@@ -163,14 +173,24 @@ public class CameraActivity extends Activity {
         return image;
     }
 
+    /**
+     * Executes the ShowPicture activity. Letting the user choose if they want to use the photo that was taken.
+     * The path of the file photo is passed in with the intent
+     */
     private void showPictureIntent(){
         Intent showPicture = new Intent(this, ShowPictureActivity.class);
         showPicture.putExtra("PATH", mOriginalPhotoPath);
         startActivity(showPicture);
     }
 
+    /**
+     * Called when a picture is taken.
+     */
     private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
 
+        /**
+         * Fixes orientation of the picture and saves the photo to a file.
+         */
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
 
@@ -201,7 +221,6 @@ public class CameraActivity extends Activity {
             }
 
             if(mOriginalPhotoPath != null){
-                //camUtils.identifyRotation(mOriginalPhotoPath);
                 showPictureIntent();
             }
 
@@ -227,12 +246,12 @@ public class CameraActivity extends Activity {
         // between applications and persist after your app has been uninstalled.
 
         // Create the storage directory if it does not exist
-        /*if (! mediaStorageDir.exists()){
+        if (! mediaStorageDir.exists()){
             if (! mediaStorageDir.mkdirs()){
-                Log.d("Visolver", "failed to create directory");
+                Log.d(TAG, "failed to create directory");
                 return null;
             }
-        }*/
+        }
 
         // Create a media file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
